@@ -1,59 +1,54 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.action_chains import ActionChains
-import time
-
-options = webdriver.ChromeOptions()
-driver = webdriver.Chrome("C:/Users/mason/Documents/chromedriver.exe", options=options)
-driver.get('http://orteil.dashnet.org/cookieclicker/')
-a = ActionChains(driver)
-
-cookie = driver.find_element(By.XPATH, '//*[@id="bigCookie"]')
-store = driver.find_element(By.XPATH, '//*[@id="products"]')
-x = 0
-'//*[@id="products"]'
-
-def hover_over(element):
-    try:
-        a.move_to_element(element).perform()
-    except Exception as e:
-        pass
 
 
+def init_driver():
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome("chromedriver.exe", options=options)
+    driver.get('http://orteil.dashnet.org/cookieclicker/')
+    cookie = driver.find_element(By.XPATH, '//*[@id="bigCookie"]')
+    return driver, cookie
 
-while True:
-    x += 1
-    cookie.click()
 
-    if x % 750 == 0:
-        print("TRYING TO BUY")
+def href_enumerating_click(driver, href,enum_index,num_elements, valid_class,
+                           descending=False):
+    for x in range(num_elements):
+        if descending:
+            x = num_elements-1-x
+        new_href = href[:enum_index] + str(x) + href[enum_index+1:]
         try:
-            for y in range(234):
-                item_list = driver.find_elements(By.XPATH, f'//*[@id="upgrade{y}"]')
-                item = driver.find_element(By.XPATH, f'//*[@id="upgrade{y}"]')
-                isPresent = len(item_list) > 0
-                if isPresent:
-                    if item.get_attribute("class") == "crate upgrade enabled":
-                        #hover_over(item)
-
-                            item.click()
+            item = driver.find_element(By.XPATH, new_href)
+            if item.get_attribute("class") == valid_class:
+                item.click()
         except:
-            pass
+            break;
 
-    if x % 500 == 0:
-        print(x/500)
-        for y in range(18):
-            item_list = driver.find_elements(By.XPATH, f'//*[@id="product{y}"]')
-            item = driver.find_element(By.XPATH, f'//*[@id="product{y}"]')
-            isPresent = len(item_list) > 0
-            if isPresent:
-                if item.get_attribute("class") == "product unlocked enabled":
-                    #hover_over(item)
-                    try:
-                        for z in range(20):
-                            item.click()
-                    except:
-                        pass
 
+def buy_upgrades(click_tick, driver):
+    if click_tick % 75 == 0:
+        href_enumerating_click(driver, '//*[@id="upgrade0"]', 16, 244,
+                               "crate upgrade enabled")
+
+
+def buy_buildings(click_tick, driver):
+    if click_tick % 50 == 0:
+        href_enumerating_click(driver, '//*[@id="product0"]', 16, 18,
+                               "product unlocked enabled", True)
+
+
+def click_ticker():
+    click_tick = 0
+    driver, cookie = init_driver()
+    try:
+        while True:
+            click_tick += 1
+            cookie.click()
+            buy_upgrades(click_tick, driver)
+            buy_buildings(click_tick, driver)
+    except KeyboardInterrupt:
+        input("You can press enter to close the game, "
+              "or save your game file then press enter.")
+        exit()
+
+
+click_ticker()
