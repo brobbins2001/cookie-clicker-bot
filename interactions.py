@@ -5,81 +5,104 @@ Defines various functions for interacting with the webpage.
 """
 
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common import exceptions
 
 
-def xpath_enumerating_click(driver, xpath, enum_index, num_elements,
-                            valid_class, descending=False):
+def get_cookie(driver):
+    """
+    Get the large cookie element
+    :param driver:
+    :return: selenium web element representing the cookie
+    """
+    return driver.find_element(By.XPATH, '//*[@id="bigCookie"]')
+
+
+def click_cookie(cookie):
+    """
+    Click the cookie element.
+    :param cookie: selenium webelement representing the cookie
+    """
+    cookie.click()
+
+def enumerating_element_click(driver, by, identifier, index_to_replace, num_elements, valid_class, descending=False):
     """
     Attempts to click a list of elements with similar XPATHS, replaces
     enum_index in xpath with ascending or descending integers, either from or to
     num_elements.
-
     :param driver: Selenium Webdriver
-    :param xpath: String: XPATH
-    :param enum_index: integer: index of XPATH to replace
+    :param by: selenium By class object. (E.g. By.XPATH)
+    :param identifer: String: Identifier used by selenium to identify the elements
+    :param inex_to_replace: integer: index of identifier to replace
     :param num_elements:  integer: number of elements to attempt to find and
     click
-
     :param valid_class: string:  checks the class of element against this
     string before clicking
-
     :param descending: boolean: Weather or not to click elements in an
     ascending or descending fashion
     :return:
     """
-    for x in range(num_elements):
+    for element in range(num_elements):
         if descending:
-            x = num_elements-1-x
-        new_xpath = xpath[:enum_index] + str(x) + xpath[enum_index+1:]
+            element = num_elements - 1 - element
+        identifier_fix = identifier[:index_to_replace] + str(element) + identifier[index_to_replace+1:]
         try:
-            item = driver.find_element(By.XPATH, new_xpath)
-            if item.get_attribute("class") == valid_class:
-                item.click()
+            clickable_element = driver.find_element(by, identifier_fix)
+            while clickable_element.get_attribute('class') == valid_class:
+                driver.execute_script("arguments[0].scrollIntoView();", clickable_element)
+                clickable_element.click()
+                print(f"Bought {identifier_fix}")
+                clickable_element = driver.find_element(by, identifier_fix)
         except:
             break
 
-
-def buy_upgrades(click_tick, driver):
+def buy_buildings(driver, click_tick):
     """
-    Attempts to buy upgrades
-    :param click_tick: Integer, current iteration of click_ticker
+        Attempts to buy buildings
+        :param click_tick: Integer, current iteration of click_ticker
+        :param driver: Selenium webdriver
+    """
+    if click_tick % 500 == 0:
+        enumerating_element_click(driver, By.XPATH, '//*[@id="product0"]', 16, 18, "product unlocked enabled", True)
+
+def buy_upgrades(driver, click_tick):
+    """
+        Attempts to buy upgrades
+        :param click_tick: Integer, current iteration of click_ticker
+        :param driver: selenium webdriver
+        """
+    if click_tick % 751 == 0:
+        enumerating_element_click(driver, By.XPATH ,'//*[@id="upgrade0"]' , 16, 244, "crate upgrade enabled")
+
+def find_golden_cookie(driver):
+    """
+    Finds and attempts to click the golden cookie element
     :param driver: selenium webdriver
     """
-    if click_tick % 753 == 0:
-        xpath_enumerating_click(driver, '//*[@id="upgrade0"]', 16, 244,
-                               "crate upgrade enabled")
+    golden_cookies = driver.find_elements(By.CLASS_NAME, "shimmer")
+    if golden_cookies:
+        try:
+            golden_cookie = driver.find_element(By.CLASS_NAME, "shimmer")
+            golden_cookie.click()
+        except exceptions.ElementNotInteractableException:
+            print("unable to interact with golden cookie")
+        except exceptions.ElementClickInterceptedException:
+            print("unable to click golden cookie")
 
 
-def buy_buildings(click_tick, driver):
+def click_until_successful(driver, by, identifer):
     """
-    Attempts to buy buildings
-    :param click_tick: Integer, current iteration of click_ticker
-    :param driver: Selenium webdriver
-    """
-    try:
-        if click_tick % 500 == 0:
-            xpath_enumerating_click(driver, '//*[@id="product0"]', 16, 18,
-                                   "product unlocked enabled", True)
-    except ElementClickInterceptedException as e:
-        print(e)
-        golden_cookie = driver.find_element(By.CLASS_NAME, "shimmer")
-        golden_cookie.click()
-
-
-def click_until_successful(driver, by_what, identifier):
-    """
-    Attempt to find and click an element until the click is successful.
-    :param driver: Selenium webdriver
-    :param by_what: Selenium "By" object provided to driver.find_element()
-     (E.g. "By.XPATH"
-    :param identifier: identifier given to driver.find_element
+    Attempts to click an element until is successfully clicks with no errors
+    :param driver: selenium webdriver
+    :param by: selenium By class (E.g. By.XPATH)
+    :param identifer: string: identifier used by selenium to identify the element
     """
     unclicked = True
     while unclicked:
         try:
-            button = driver.find_element(by_what, identifier)
-            button.click()
+            element = driver.find_element(by, identifer)
+            driver.execute_script("arguments[0].scrollIntoView();",
+                                  element)
+            element.click()
             unclicked = False
         except:
             pass
